@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+  <title>OWASP CTF Academy - Levels</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>OWASP CTF Academy</h1>
+    <p><a href="/reset" style="color:#8b949e; font-size:0.85em;">↺ Restart / switch difficulty</a></p>
+
+    <p>
+      <span class="hearts">
+        {% for i in range(player.hearts) %}❤️{% endfor %}
+        {% for i in range(3 - player.hearts) %}🖤{% endfor %}
+      </span>
+      &nbsp;&nbsp;
+      <span class="badge">Score: {{ player.score }}</span>
+      &nbsp;
+      <span class="badge">{{ player.difficulty }}</span>
+    </p>
+
+    <h3>Choose a level</h3>
+
+    {% for level in levels %}
+      <div class="level-card {% if level.locked %}locked{% endif %} {% if level.solved %}solved{% endif %} {% if level.is_next %}next-up{% endif %}">
+        {% if level.is_next %}<span class="badge next-badge">▶ Play Next</span>{% endif %}
+        <strong>Level {{ level.id }}: {{ level.name }}</strong>
+        <span class="badge">{{ level.owasp }}</span>
+        {% if level.solved %}<span class="badge">✅ Solved</span>{% endif %}
+        <p>{{ level.description }}</p>
+
+        {% if level.locked %}
+          <p><em>🔒 Locked — solve the previous level first.</em></p>
+        {% else %}
+          <a href="/level/{{ level.slug }}"><button>Enter Level</button></a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</body>
+</html>

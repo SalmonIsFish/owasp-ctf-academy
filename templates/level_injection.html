@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <title>Level 1: SQL Injection</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <p><a href="/levels" style="color:#8b949e;">&larr; Back to levels</a></p>
+
+    <h1>Level 1: SQL Injection</h1>
+    <span class="badge">{{ level.owasp }}</span>
+
+    <p>
+      <span class="hearts">
+        {% for i in range(player.hearts) %}❤️{% endfor %}
+        {% for i in range(3 - player.hearts) %}🖤{% endfor %}
+      </span>
+    </p>
+
+    {% if player.difficulty == "beginner" %}
+      <div class="level-card">
+        <strong>📘 Tutorial</strong>
+        <p>This login form builds its database query by directly inserting
+        whatever you type into a string. If you can make your input contain
+        SQL syntax instead of just plain text, you might be able to change
+        what the query actually does.</p>
+        <p>Try entering something in the username field that includes a
+        single quote <code>'</code> — that character has special meaning
+        in SQL and may let you "break out" of the intended query.</p>
+      </div>
+    {% endif %}
+
+    {% if solved %}
+      <div class="level-card solved">
+        <strong>✅ You've already solved this level.</strong>
+      </div>
+    {% endif %}
+
+    <h3>Target login form</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="attempt_login">
+      <input name="username" placeholder="username"><br><br>
+      <input name="password" placeholder="password"><br><br>
+      <button type="submit">Attempt Login</button>
+    </form>
+
+    {% if result %}
+    <div class="level-card {% if result.type == 'success' %}solved{% endif %}">
+    <p>{{ result.message }}</p>
+    {% if result.show_flag %}
+      <p>🚩 Flag: <code>{{ level.flag }}</code></p>
+    {% endif %}
+    </div>
+    {% endif %}
+
+    <h3>Submit flag</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="submit_flag">
+      <input name="flag" placeholder="FLAG{...}"><br><br>
+      <button type="submit">Submit Flag</button>
+    </form>
+
+    {% if flag_message %}
+      <div class="level-card {% if flag_message.type == 'success' %}solved{% endif %}">
+        <p>{{ flag_message.message }}</p>
+      </div>
+    {% endif %}
+
+    {% if solved %}
+      <div style="margin-top: 16px;">
+        {% if next_level %}
+          <a href="/level/{{ next_level.slug }}"><button>Next Level →</button></a>
+        {% else %}
+          <a href="/levels"><button>🎉 All levels complete — back to overview</button></a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

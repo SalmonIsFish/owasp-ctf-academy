@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <title>OWASP CTF Academy</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>OWASP CTF Academy</h1>
+    <p>Learn web security by breaking it. Five levels, five real OWASP Top 10 (2025) vulnerability classes.</p>
+
+    <form method="post" action="/start">
+      <h3>Choose your difficulty</h3>
+
+      <label class="mode-card">
+        <input type="radio" name="difficulty" value="beginner" checked>
+        <strong>Beginner</strong>
+        <p>Levels unlock one at a time. Hints and tutorials included.</p>
+      </label>
+
+      <label class="mode-card">
+        <input type="radio" name="difficulty" value="expert">
+        <strong>Expert</strong>
+        <p>All levels open immediately. No hints. You're on your own.</p>
+      </label>
+
+      <button type="submit">Start</button>
+    </form>
+  </div>
+</body>
+</html>
