@@ -199,6 +199,79 @@ def level_access_control():
         next_level=next_level,
     )
 
+@app.route("/level/auth-failures", methods=["GET", "POST"])
+def level_auth_failures():
+    player = current_player()
+    if not player:
+        return redirect("/")
+
+    level = next(l for l in game.LEVELS if l["slug"] == "auth-failures")
+
+    login_result = None
+    flag_message = None
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "attempt_login":
+            username = request.form.get("username", "")
+            password = request.form.get("password", "")
+
+            user = game.level3_login(username, password, player_id=player["id"])
+
+            if user:
+                login_result = {
+                    "type": "success",
+                    "message": f"Login successful! Welcome, {user['username']}.",
+                }
+                game.log_event(player["id"], level["id"], "brute_force_success", username)
+            else:
+                login_result = {"type": "fail", "message": "Invalid credentials."}
+
+        elif action == "submit_flag":
+            submitted = request.form.get("flag", "").strip()
+            if submitted == level["flag"]:
+                game.solve_level(player["id"], level["id"])
+                flag_message = {"type": "success", "message": "Correct! Level solved."}
+            else:
+                updated = game.lose_heart(player["id"], level["id"], "wrong_flag")
+                player = updated
+                flag_message = {"type": "fail", "message": "Wrong flag. -1 heart."}
+
+    total_attempts = game.level3_attempt_count(player["id"])
+    recent_rate = game.level3_recent_attempt_rate(player["id"], seconds=5)
+
+    progress = game.get_progress(player["id"])
+    solved = bool(progress.get(level["id"], {}).get("solved"))
+
+    next_level = next(
+        (l for l in game.LEVELS if l["id"] == level["id"] + 1), None
+    )
+
+    return render_template(
+        "level_auth_failures.html",
+        player=player,
+        level=level,
+        login_result=login_result,
+        flag_message=flag_message,
+        total_attempts=total_attempts,
+        recent_rate=recent_rate,
+        solved=solved,
+        next_level=next_level,
+    )
+
+@app.route("/level/auth-failures/wordlist.txt")
+def auth_failures_wordlist():
+    player = current_player()
+    if not player:
+        return redirect("/")
+
+    content = "\n".join(game.LEVEL3_WORDLIST)
+    resp = make_response(content)
+    resp.headers["Content-Type"] = "text/plain"
+    resp.headers["Content-Disposition"] = "attachment; filename=wordlist.txt"
+    return resp
+
 if __name__ == "__main__":
     game.init_db()
     app.run(debug=True, host="127.0.0.1", port=5001)

@@ -7,6 +7,18 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "instance", "ctf.db")
 
 STARTING_HEARTS = 3
 
+LEVEL3_WORDLIST = [
+    "123456", "password", "12345678", "qwerty", "123456789", "letmein",
+    "football", "iloveyou", "admin123", "welcome1", "monkey123", "dragon99",
+    "sunshine1", "princess1", "baseball1", "trustno1", "master123", "hello123",
+    "freedom1", "whatever1", "shadow99", "michael1", "jennifer1", "computer1",
+    "summer2023", "winter2024", "spring2024", "autumn2023", "summer2024",
+    "password1", "qwerty123", "abc12345", "letmein1", "iloveyou1", "football1",
+    "superman1", "batman123", "starwars1", "pokemon99", "minecraft1",
+    "soccer123", "basketball", "tennis123", "guitar123", "musiclover",
+    "happy2024", "lucky2023", "newyork12", "london123", "paris2024",
+]
+
 # Each level maps to one OWASP Top 10 (2025) category.
 # "slug" is used in URLs, e.g. /level/injection
 LEVELS = [
@@ -32,6 +44,7 @@ LEVELS = [
         "name": "Authentication Failures",
         "owasp": "A07:2025 - Authentication Failures",
         "description": "Break a weak login that has no rate limiting.",
+        "flag": "FLAG{no_rate_limit_brute_force}",
     },
     {
         "id": 4,
@@ -95,11 +108,25 @@ def init_db():
             password TEXT NOT NULL
         );
 
-        CREATE TABLE IF NOT EXISTS level2_notes (
+       CREATE TABLE IF NOT EXISTS level2_notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             owner TEXT NOT NULL,
             title TEXT NOT NULL,
             content TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS level3_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS level3_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP
         );
         """
     )
@@ -161,16 +188,24 @@ def init_db():
              your_note_id),
         )
 
-        # A few more decoys after, so the flag isn't suspiciously near the end
+       # A few more decoys after, so the flag isn't suspiciously near the end
         for _ in range(6):
             conn.execute(
                 "INSERT INTO level2_notes (owner, title, content) VALUES (?, ?, ?)",
                 (random.choice(decoy_owners), random.choice(decoy_titles), random.choice(decoy_content)),
             )
 
+    try:
+        conn.execute(
+            "INSERT INTO level3_users (username, password) VALUES ('jsmith', 'summer2024')"
+        )
+    except sqlite3.IntegrityError:
+        pass
+
     conn.commit()
     conn.close()
     
+
 def create_player(difficulty="beginner"):
     token = secrets.token_hex(16)
     conn = get_db()
@@ -307,3 +342,52 @@ def level2_get_note(note_id):
     ).fetchone()
     conn.close()
     return dict(note) if note else None
+
+def level3_login(username, password, player_id=None):
+    """
+    Safe from SQL injection (parameterized query) -- the vulnerability
+    here is purely the ABSENCE of rate limiting, not the query itself.
+    """
+    conn = get_db()
+    user = conn.execute(
+        "SELECT * FROM level3_users WHERE username = ? AND password = ?",
+        (username, password),
+    ).fetchone()
+
+    if player_id is not None:
+        conn.execute(
+            "INSERT INTO level3_attempts (player_id, username, password) VALUES (?, ?, ?)",
+            (player_id, username, password),
+        )
+        conn.commit()
+
+    conn.close()
+    return dict(user) if user else None
+
+
+def level3_attempt_count(player_id):
+    conn = get_db()
+    row = conn.execute(
+        "SELECT COUNT(*) as c FROM level3_attempts WHERE player_id = ?", (player_id,)
+    ).fetchone()
+    conn.close()
+    return row["c"]
+
+
+def level3_recent_attempt_rate(player_id, seconds=5):
+    """
+    Counts how many attempts this player made in the last N seconds.
+    This is the actual 'detection' logic -- a real system would flag
+    a high count in a short window as a brute-force pattern.
+    """
+    conn = get_db()
+    row = conn.execute(
+        f"""
+        SELECT COUNT(*) as c FROM level3_attempts
+        WHERE player_id = ?
+        AND timestamp >= datetime('now', '-{seconds} seconds')
+        """,
+        (player_id,),
+    ).fetchone()
+    conn.close()
+    return row["c"]

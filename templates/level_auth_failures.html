@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <title>Level 3: Authentication Failures</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <p><a href="/levels" style="color:#8b949e;">&larr; Back to levels</a></p>
+
+    <h1>Level 3: Authentication Failures</h1>
+    <span class="badge">{{ level.owasp }}</span>
+
+    <p>
+      <span class="hearts">
+        {% for i in range(player.hearts) %}❤️{% endfor %}
+        {% for i in range(3 - player.hearts) %}🖤{% endfor %}
+      </span>
+    </p>
+
+    {% if player.difficulty == "beginner" %}
+      <div class="level-card">
+        <strong>📘 Tutorial</strong>
+        <p>This login form is safe from SQL injection — it uses proper
+        parameterized queries. But look closely: nothing stops you from
+        trying as many passwords as you want, as fast as you want.</p>
+        <p>Username is <code>jsmith</code>. Download the wordlist below —
+        it contains common passwords, one of which is correct. Trying them
+        all by hand would take forever, and that's the point: nothing here
+        stops you from automating it.</p>
+        <p>In Python, the <code>requests</code> library lets you send login
+        attempts programmatically instead of clicking through a browser.
+        Try writing a script that reads the wordlist line by line and
+        POSTs each password to this page until one succeeds.</p>
+        <p>Here's a starting skeleton — fill in the two blanks marked
+        <code># TODO</code>:</p>
+        <pre style="background:#0d1117; border:1px solid #30363d; padding:12px; border-radius:6px; overflow-x:auto;"><code>import requests
+
+session = requests.Session()
+session.post("http://127.0.0.1:5001/start", data={"difficulty": "expert"})
+
+with open("scripts/wordlist.txt") as f:
+    passwords = [line.strip() for line in f]
+
+for pw in passwords:
+    resp = session.post(
+        "http://127.0.0.1:5001/level/auth-failures",
+        data={
+            "action": "attempt_login",
+            "username": "jsmith",
+            "password": ___,  # TODO: send the current guess
+        },
+    )
+    if ___ in resp.text:  # TODO: what text appears only on success?
+        print("Found it:", pw)
+        break
+</code></pre>
+        </div>
+    {% endif %}
+
+    {% if solved %}
+      <div class="level-card solved">
+        <strong>✅ You've already solved this level.</strong>
+      </div>
+    {% endif %}
+
+    <h3>Target login</h3>
+    <p>
+      <a href="/level/auth-failures/wordlist.txt"><button type="button">⬇ Download wordlist.txt</button></a>
+    </p>
+    <form method="post">
+      <input type="hidden" name="action" value="attempt_login">
+      <input name="username" placeholder="username" value="jsmith"><br><br>
+      <input name="password" placeholder="password"><br><br>
+      <button type="submit">Attempt Login</button>
+    </form>
+
+    {% if login_result %}
+      <div class="level-card {% if login_result.type == 'success' %}solved{% endif %}">
+        <p>{{ login_result.message }}</p>
+        {% if login_result.type == 'success' %}
+          <p>🚩 Flag: <code>{{ level.flag }}</code></p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="level-card">
+      <strong>📊 Attempt stats (no rate limiting in effect)</strong>
+      <p>Total attempts: <b>{{ total_attempts }}</b> &nbsp;|&nbsp;
+         Attempts in last 5 seconds: <b>{{ recent_rate }}</b></p>
+    </div>
+
+    <h3>Submit flag</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="submit_flag">
+      <input name="flag" placeholder="FLAG{...}"><br><br>
+      <button type="submit">Submit Flag</button>
+    </form>
+
+    {% if flag_message %}
+      <div class="level-card {% if flag_message.type == 'success' %}solved{% endif %}">
+        <p>{{ flag_message.message }}</p>
+      </div>
+    {% endif %}
+
+    {% if solved %}
+      <div style="margin-top: 16px;">
+        {% if next_level %}
+          <a href="/level/{{ next_level.slug }}"><button>Next Level →</button></a>
+        {% else %}
+          <a href="/levels"><button>🎉 All levels complete — back to overview</button></a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
