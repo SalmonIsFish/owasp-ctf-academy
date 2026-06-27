@@ -12,9 +12,21 @@ documented in code comments — this is a learning tool, not a production app.
 |---|---|---|
 | 1 | A05:2025 - Injection | ✅ Done |
 | 2 | A01:2025 - Broken Access Control | ✅ Done |
-| 3 | A07:2025 - Authentication Failures | 🚧 In progress |
-| 4 | A02:2025 - Security Misconfiguration | ⏳ Planned |
+| 3 | A07:2025 - Authentication Failures | ✅ Done |
+| 4 | A02:2025 - Security Misconfiguration | 🚧 In progress |
 | 5 | A10:2025 - Mishandling of Exceptional Conditions | ⏳ Planned |
+
+## Level highlights
+
+- **Level 1 (Injection)**: classic SQL injection login bypass via unescaped
+  string concatenation. Demonstrates why parameterized queries matter.
+- **Level 2 (Broken Access Control)**: IDOR — view another user's private
+  note by changing an ID, no ownership check on the backend. Includes a
+  realistic, non-sequential ID scheme and a discoverable in-app hint.
+- **Level 3 (Authentication Failures)**: a login with *zero* SQL injection
+  risk (properly parameterized), but no rate limiting at all. Includes a
+  50-entry password wordlist and a real Python `requests`-based brute-force
+  script (`scripts/brute_force_level3.py`) that cracks it in under a second.
 
 ## Features
 
