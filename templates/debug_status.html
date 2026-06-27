@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <title>Debug Status - INTERNAL</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <p><a href="/levels" style="color:#8b949e;">&larr; Back to levels</a></p>
+
+    <h1>🛠 /debug/status</h1>
+    <p style="color:#f85149;"><strong>⚠ INTERNAL USE ONLY — remove before deploy</strong></p>
+
+    <div class="level-card">
+      <strong>Server status</strong>
+      <p>
+        Flask debug mode: <b>True</b><br>
+        Environment: <b>development</b><br>
+        Database: <b>sqlite:///instance/ctf.db</b><br>
+        Build: <b>v0.9.2-internal</b><br>
+        Last deploy: <b>never (still in dev)</b>
+      </p>
+    </div>
+
+    <div class="level-card">
+      <strong>Internal note from the dev team</strong>
+      <p>
+        "Hey team — left this status page up to debug the deploy pipeline.
+        DO NOT let this ship to prod, it's not supposed to be public.
+        Also, why is robots.txt the only thing hiding this? Someone fix
+        that properly before launch. — J"
+      </p>
+    </div>
+
+    {% if player.difficulty == "beginner" %}
+      <div class="level-card">
+        <strong>📘 Tutorial</strong>
+        <p>You found this page by checking <code>/robots.txt</code> — a
+        file that tells search engines what NOT to index. Listing a path
+        there doesn't actually protect it; it just hints that something
+        exists. This is a real, common misconfiguration: relying on
+        "nobody will find it" instead of an actual access control.</p>
+      </div>
+    {% endif %}
+
+    {% if solved %}
+      <div class="level-card solved">
+        <strong>✅ You've already solved this level.</strong>
+      </div>
+    {% endif %}
+
+    <div class="level-card solved">
+      <p>🚩 Flag: <code>{{ level.flag }}</code></p>
+    </div>
+
+    <h3>Submit flag</h3>
+    <form method="post">
+      <input name="flag" placeholder="FLAG{...}"><br><br>
+      <button type="submit">Submit Flag</button>
+    </form>
+
+    {% if flag_message %}
+      <div class="level-card {% if flag_message.type == 'success' %}solved{% endif %}">
+        <p>{{ flag_message.message }}</p>
+      </div>
+    {% endif %}
+
+    {% if solved %}
+      <div style="margin-top: 16px;">
+        {% if next_level %}
+          <a href="/level/{{ next_level.slug }}"><button>Next Level →</button></a>
+        {% else %}
+          <a href="/levels"><button>🎉 All levels complete — back to overview</button></a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

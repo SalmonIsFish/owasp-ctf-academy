@@ -32,6 +32,16 @@
 
         {% if level.locked %}
           <p><em>🔒 Locked — solve the previous level first.</em></p>
+        {% elif level.slug == "misconfiguration" %}
+          <p><em>🔍 No direct link for this one — you'll need to find the entry point yourself.</em></p>
+          {% if player.difficulty == "beginner" %}
+            <p style="font-size:0.85em; color:#8b949e;">
+              📘 Hint: real websites often have a file at <code>/robots.txt</code>
+              that tells search engines which pages NOT to index — but that's just
+              a polite request, not actual protection. Check what this site's
+              robots.txt says.
+            </p>
+          {% endif %}
         {% else %}
           <a href="/level/{{ level.slug }}"><button>Enter Level</button></a>
         {% endif %}

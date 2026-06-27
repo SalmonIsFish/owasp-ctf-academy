@@ -105,7 +105,13 @@ for pw in passwords:
 
     {% if solved %}
       <div style="margin-top: 16px;">
-        {% if next_level %}
+        {% if next_level and next_level.slug == "misconfiguration" %}
+          <div class="level-card">
+            <p>🔍 Level 4 has no direct link — it's a discovery challenge.
+            Head back to <a href="/levels">the level overview</a> for a hint
+            on where to start looking.</p>
+          </div>
+        {% elif next_level %}
           <a href="/level/{{ next_level.slug }}"><button>Next Level →</button></a>
         {% else %}
           <a href="/levels"><button>🎉 All levels complete — back to overview</button></a>

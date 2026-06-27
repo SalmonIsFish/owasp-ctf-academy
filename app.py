@@ -272,6 +272,51 @@ def auth_failures_wordlist():
     resp.headers["Content-Disposition"] = "attachment; filename=wordlist.txt"
     return resp
 
+@app.route("/robots.txt")
+def robots_txt():
+    content = "User-agent: *\nDisallow: /debug/status\n"
+    resp = make_response(content)
+    resp.headers["Content-Type"] = "text/plain"
+    return resp
+
+
+@app.route("/debug/status", methods=["GET", "POST"])
+def debug_status():
+    player = current_player()
+    if not player:
+        return redirect("/")
+
+    level = next(l for l in game.LEVELS if l["slug"] == "misconfiguration")
+
+    game.log_event(player["id"], level["id"], "debug_endpoint_found")
+
+    flag_message = None
+    if request.method == "POST":
+        submitted = request.form.get("flag", "").strip()
+        if submitted == level["flag"]:
+            game.solve_level(player["id"], level["id"])
+            flag_message = {"type": "success", "message": "Correct! Level solved."}
+        else:
+            updated = game.lose_heart(player["id"], level["id"], "wrong_flag")
+            player = updated
+            flag_message = {"type": "fail", "message": "Wrong flag. -1 heart."}
+
+    progress = game.get_progress(player["id"])
+    solved = bool(progress.get(level["id"], {}).get("solved"))
+
+    next_level = next(
+        (l for l in game.LEVELS if l["id"] == level["id"] + 1), None
+    )
+
+    return render_template(
+        "debug_status.html",
+        player=player,
+        level=level,
+        flag_message=flag_message,
+        solved=solved,
+        next_level=next_level,
+    )
+
 if __name__ == "__main__":
     game.init_db()
     app.run(debug=True, host="127.0.0.1", port=5001)

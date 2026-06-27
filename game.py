@@ -52,6 +52,7 @@ LEVELS = [
         "name": "Security Misconfiguration",
         "owasp": "A02:2025 - Security Misconfiguration",
         "description": "Find a debug endpoint that was left exposed.",
+        "flag": "FLAG{robots_txt_leaked_debug_endpoint}",
     },
     {
         "id": 5,
