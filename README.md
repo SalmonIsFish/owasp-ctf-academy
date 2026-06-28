@@ -6,7 +6,7 @@ classes by exploiting them yourself, then capturing a flag to prove it.
 Built with Flask + SQLite. Every vulnerability is deliberately planted and
 documented in code comments — this is a learning tool, not a production app.
 
-## Status: in progress
+## Status: all 5 core levels complete
 
 | Level | OWASP Category | Status |
 |---|---|---|
@@ -14,7 +14,7 @@ documented in code comments — this is a learning tool, not a production app.
 | 2 | A01:2025 - Broken Access Control | ✅ Done |
 | 3 | A07:2025 - Authentication Failures | ✅ Done |
 | 4 | A02:2025 - Security Misconfiguration | ✅ Done |
-| 5 | A10:2025 - Mishandling of Exceptional Conditions | 🚧 In progress |
+| 5 | A10:2025 - Mishandling of Exceptional Conditions | ✅ Done |
 
 ## Level highlights
 
@@ -31,6 +31,17 @@ documented in code comments — this is a learning tool, not a production app.
   `/debug/status`, discoverable only by checking `/robots.txt` — a real
   recon technique. Demonstrates that "security through obscurity" (hiding
   a path instead of actually protecting it) isn't real security.
+- **Level 5 (Mishandling of Exceptional Conditions)**: a "members only" check
+  wrapped in `try/except` that was "defensively" written to grant access on
+  *any* error instead of denying it — so a non-numeric `membership_id` (e.g.
+  `abc`) bypasses the check entirely. While building this level, caught and
+  fixed two real bugs of my own: the flag was originally shown on *any*
+  successful access (including the legitimate `membership_id=1` case),
+  giving away the answer before the exploit was even attempted; and the
+  "Check Access" form caused a jarring scroll-to-top on every submission.
+  Fixed by deriving a separate `exploit_triggered` flag (only true when
+  access was granted *via* the exception path) to gate the flag display,
+  and by anchoring the form's redirect to the relevant section of the page.
 
 ## Features
 
@@ -57,3 +68,4 @@ Then visit `http://127.0.0.1:5001`.
 - Honeypot system (fake routes that log/penalize suspicious probing)
 - Remaining OWASP categories (Supply Chain, Crypto Failures, Insecure Design,
   Integrity Failures, Logging & Alerting Failures) as a v2 expansion
+- Production-style deployment (Linux host, WSGI server, reverse proxy)

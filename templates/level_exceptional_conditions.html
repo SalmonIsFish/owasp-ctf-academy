@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <title>Level 5: Mishandling of Exceptional Conditions</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <p><a href="/levels" style="color:#8b949e;">&larr; Back to levels</a></p>
+
+    <h1>Level 5: Mishandling of Exceptional Conditions</h1>
+    <span class="badge">{{ level.owasp }}</span>
+
+    <p>
+      <span class="hearts">
+        {% for i in range(player.hearts) %}❤️{% endfor %}
+        {% for i in range(3 - player.hearts) %}🖤{% endfor %}
+      </span>
+    </p>
+
+    {% if player.difficulty == "beginner" %}
+      <div class="level-card">
+        <strong>📘 Tutorial</strong>
+        <p>This "members only" page checks your <code>membership_id</code>
+        against a database, using a <code>try/except</code> block. The
+        intent was: "if anything weird happens during the check, don't
+        crash the page." But look at what the except block actually
+        does on error — does it deny access, or grant it?</p>
+        <p>Try passing a <code>membership_id</code> that isn't a valid
+        number at all. What happens when the lookup itself fails to even
+        run, instead of just finding no match?</p>
+      </div>
+    {% endif %}
+
+    {% if solved %}
+      <div class="level-card solved">
+        <strong>✅ You've already solved this level.</strong>
+      </div>
+    {% endif %}
+
+   <h3 id="content-section">Members-only content</h3>
+    <p>Current membership_id: <code>{{ membership_id }}</code></p>
+
+    <div class="level-card {% if access_granted %}solved{% endif %}">
+      {% if access_granted %}
+        <strong>✅ Access granted.</strong>
+        <p>Welcome, valued member. Here's your exclusive content...</p>
+        {% if exploit_triggered %}
+          <p>🚩 Flag: <code>{{ level.flag }}</code></p>
+        {% endif %}
+      {% else %}
+        <strong>🚫 Access denied.</strong>
+        <p>You are not a recognized active member.</p>
+      {% endif %}
+    </div>
+
+    <form method="get" action="/level/exceptional-conditions#content-section">
+      <input name="membership_id" type="text" placeholder="membership_id" value="{{ membership_id }}">
+      <button type="submit">Check Access</button>
+    </form>
+
+    <h3>Submit flag</h3>
+    <form method="post">
+      <input name="flag" placeholder="FLAG{...}"><br><br>
+      <button type="submit">Submit Flag</button>
+    </form>
+
+    {% if flag_message %}
+      <div class="level-card {% if flag_message.type == 'success' %}solved{% endif %}">
+        <p>{{ flag_message.message }}</p>
+      </div>
+    {% endif %}
+
+    {% if solved %}
+      <div style="margin-top: 16px;">
+        {% if next_level %}
+          <a href="/level/{{ next_level.slug }}"><button>Next Level →</button></a>
+        {% else %}
+          <a href="/levels"><button>🎉 All levels complete — back to overview</button></a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

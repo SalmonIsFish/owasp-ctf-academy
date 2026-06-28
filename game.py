@@ -60,6 +60,7 @@ LEVELS = [
         "name": "Mishandling of Exceptional Conditions",
         "owasp": "A10:2025 - Mishandling of Exceptional Conditions",
         "description": "Trigger an error that skips a security check.",
+        "flag": "FLAG{exception_swallowed_the_access_check}",
     },
 ]
 
@@ -128,6 +129,11 @@ def init_db():
             username TEXT NOT NULL,
             password TEXT NOT NULL,
             timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS level5_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            active INTEGER NOT NULL
         );
         """
     )
@@ -202,6 +208,15 @@ def init_db():
         )
     except sqlite3.IntegrityError:
         pass
+
+    existing_members = conn.execute("SELECT COUNT(*) as c FROM level5_members").fetchone()
+    if existing_members["c"] == 0:
+        conn.execute(
+            "INSERT INTO level5_members (name, active) VALUES (?, ?)", ("alice", 1)
+        )
+        conn.execute(
+            "INSERT INTO level5_members (name, active) VALUES (?, ?)", ("bob", 0)
+        )
 
     conn.commit()
     conn.close()
@@ -392,3 +407,27 @@ def level3_recent_attempt_rate(player_id, seconds=5):
     ).fetchone()
     conn.close()
     return row["c"]
+
+def level5_check_membership(membership_id):
+    """
+    INTENTIONALLY VULNERABLE -- this function was "defensively" written
+    so that if anything goes wrong while checking membership, the user
+    is let through rather than the app crashing. That defensive instinct
+    accidentally turned an access check into a bypass: any error at all
+    (not just a clean 'not found') results in access_granted = True.
+    """
+    conn = get_db()
+    try:
+        member_id_int = int(membership_id)
+        row = conn.execute(
+            "SELECT * FROM level5_members WHERE id = ?", (member_id_int,)
+        ).fetchone()
+        access_granted = row is not None and row["active"] == 1
+    except Exception:
+        # "Don't break the page if something's weird with the input"
+        # -- this is the bug. Should be: access_granted = False
+        access_granted = True
+    finally:
+        conn.close()
+
+    return access_granted

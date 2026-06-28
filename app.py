@@ -317,6 +317,60 @@ def debug_status():
         next_level=next_level,
     )
 
+@app.route("/level/exceptional-conditions", methods=["GET", "POST"])
+def level_exceptional_conditions():
+    player = current_player()
+    if not player:
+        return redirect("/")
+
+    level = next(l for l in game.LEVELS if l["slug"] == "exceptional-conditions")
+
+    membership_id = request.args.get("membership_id", "1")
+    game.record_attempt(player["id"], level["id"])
+
+    access_granted = game.level5_check_membership(membership_id)
+
+    exploit_triggered = False
+    if access_granted:
+        try:
+            int(membership_id)
+        except ValueError:
+          exploit_triggered = True
+        game.log_event(
+                player["id"], level["id"], "exception_bypass_triggered",
+                f"membership_id={membership_id}"
+            )
+
+    flag_message = None
+    if request.method == "POST":
+        submitted = request.form.get("flag", "").strip()
+        if submitted == level["flag"]:
+            game.solve_level(player["id"], level["id"])
+            flag_message = {"type": "success", "message": "Correct! Level solved."}
+        else:
+            updated = game.lose_heart(player["id"], level["id"], "wrong_flag")
+            player = updated
+            flag_message = {"type": "fail", "message": "Wrong flag. -1 heart."}
+
+    progress = game.get_progress(player["id"])
+    solved = bool(progress.get(level["id"], {}).get("solved"))
+
+    next_level = next(
+        (l for l in game.LEVELS if l["id"] == level["id"] + 1), None
+    )
+
+    return render_template(
+        "level_exceptional_conditions.html",
+        player=player,
+        level=level,
+        membership_id=membership_id,
+        access_granted=access_granted,
+        exploit_triggered=exploit_triggered,
+        solved=solved,
+        flag_message=flag_message,
+        next_level=next_level,
+    )
+
 if __name__ == "__main__":
     game.init_db()
     app.run(debug=True, host="127.0.0.1", port=5001)
