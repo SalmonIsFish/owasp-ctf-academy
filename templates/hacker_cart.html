@@ -12,10 +12,12 @@
       <a href="/level/hacker/shop" style="color:#8b949e; font-size:0.85em;">← Continue Shopping</a>
     </p>
 
+    <p><span class="badge">🕵️ Pentest Mode</span> <span class="badge">Score: {{ player.score }}</span></p>
 
     <h3>Your Cart</h3>
 
     {% if cart_items %}
+      {% for item in cart_items %}
         <div class="level-card">
           <strong>{{ item.name }}</strong>
           <span class="badge">${{ "%.2f"|format(item.price) }} × {{ item.qty }}</span>
