@@ -2,6 +2,8 @@ import sqlite3
 import os
 import json
 import secrets
+import random
+random.seed(42)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "instance", "ctf.db")
 
@@ -21,6 +23,7 @@ LEVEL3_WORDLIST = [
 
 # Each level maps to one OWASP Top 10 (2025) category.
 # "slug" is used in URLs, e.g. /level/injection
+HACKER_HONEYTOKEN_FLAG = "FLAG{nice_try_this_is_a_honeytoken}"
 LEVELS = [
     {
         "id": 1,
@@ -61,6 +64,14 @@ LEVELS = [
         "owasp": "A10:2025 - Mishandling of Exceptional Conditions",
         "description": "Trigger an error that skips a security check.",
         "flag": "FLAG{exception_swallowed_the_access_check}",
+    },
+    {
+        "id": 6,
+        "slug": "hacker",
+        "name": "Hacker — The Storefront",
+        "owasp": "Capstone - Chained Exploitation",
+        "description": "A small shop with real layered defenses. Get past them, then find what's underneath.",
+        "flag": "FLAG{price_tamper_total_mismatch}",
     },
 ]
 
@@ -134,6 +145,31 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             active INTEGER NOT NULL
+        );
+         CREATE TABLE IF NOT EXISTS level6_products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            price REAL NOT NULL,
+            description TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS level6_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            owner_label TEXT NOT NULL,
+            items_json TEXT NOT NULL,
+            claimed_total REAL NOT NULL,
+            real_total REAL NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (player_id) REFERENCES players(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS level6_state (
+            player_id INTEGER PRIMARY KEY,
+            decoy_triggered_at TEXT,
+            suspicious INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (player_id) REFERENCES players(id)
         );
         """
     )
@@ -217,6 +253,117 @@ def init_db():
         conn.execute(
             "INSERT INTO level5_members (name, active) VALUES (?, ?)", ("bob", 0)
         )
+
+    existing_products = conn.execute("SELECT COUNT(*) as c FROM level6_products").fetchone()
+    if existing_products["c"] == 0:
+        products = [
+            ("Wireless Mouse", 19.99, "Ergonomic, 2.4GHz, USB receiver."),
+            ("Mechanical Keyboard", 79.99, "Hot-swappable switches, RGB."),
+            ("USB-C Hub", 24.50, "7-in-1, HDMI + 3x USB-A + SD card."),
+            ("Webcam 1080p", 34.95, "Autofocus, built-in mic."),
+            ("Laptop Stand", 29.00, "Aluminum, adjustable height."),
+            ("Noise-Cancelling Headphones", 129.99, "Over-ear, 30hr battery."),
+        ]
+        for name, price, desc in products:
+            conn.execute(
+                "INSERT INTO level6_products (name, price, description) VALUES (?, ?, ?)",
+                (name, price, desc),
+            )
+
+    existing_orders = conn.execute("SELECT COUNT(*) as c FROM level6_orders").fetchone()
+    if existing_orders["c"] == 0:
+        decoy_owners = ["marcus", "priya", "sam", "devon", "lena", "oscar"]
+
+        def fake_items():
+            return json.dumps([
+                {"product_id": random.randint(1, 6), "qty": random.randint(1, 3)}
+            ])
+
+        random.seed(99)  # deterministic, separate seed from level 2's
+
+        # Decoy orders before the interesting ones -- plain, no notes
+        for _ in range(5):
+            total = round(random.uniform(15, 150), 2)
+            conn.execute(
+                """
+                INSERT INTO level6_orders
+                    (player_id, owner_label, items_json, claimed_total, real_total, note)
+                VALUES (0, ?, ?, ?, ?, '')
+                """,
+                (random.choice(decoy_owners), fake_items(), total, total),
+            )
+
+        # The honeytoken: looks exactly like a real flag, but isn't.
+        # A player who finds this via IDOR and submits it should NOT solve
+        # the level -- it should trigger the decoy-detected/timer logic
+        # we designed earlier (handled in app.py, not here).
+        decoy_flag_order_id = conn.execute(
+            """
+            INSERT INTO level6_orders
+                (player_id, owner_label, items_json, claimed_total, real_total, note)
+            VALUES (0, ?, ?, ?, ?, ?)
+            """,
+           ("priya", json.dumps([{"product_id": 2, "qty": 1}]), 89.99, 89.99,
+ f"Order note: thanks for your purchase! {HACKER_HONEYTOKEN_FLAG}"),
+        ).lastrowid
+
+        # More decoys
+        for _ in range(6):
+            total = round(random.uniform(15, 150), 2)
+            conn.execute(
+                """
+                INSERT INTO level6_orders
+                    (player_id, owner_label, items_json, claimed_total, real_total, note)
+                VALUES (0, ?, ?, ?, ?, '')
+                """,
+                (random.choice(decoy_owners), fake_items(), total, total),
+            )
+
+        # The real second-stage flag, hidden in a decoy order's note
+        real_flag_order_id = conn.execute(
+            """
+            INSERT INTO level6_orders
+                (player_id, owner_label, items_json, claimed_total, real_total, note)
+            VALUES (0, ?, ?, ?, ?, ?)
+            """,
+            ("devon", json.dumps([{"product_id": 5, "qty": 1}]), 29.00, 29.00,
+             f"Order note: leave package at front door. {LEVELS[5]['flag']}"),
+        ).lastrowid
+
+        # More decoys after, so neither special order is suspiciously placed
+        for _ in range(5):
+            total = round(random.uniform(15, 150), 2)
+            conn.execute(
+                """
+                INSERT INTO level6_orders
+                    (player_id, owner_label, items_json, claimed_total, real_total, note)
+                VALUES (0, ?, ?, ?, ?, '')
+                """,
+                (random.choice(decoy_owners), fake_items(), total, total),
+            )
+
+        # The real second-stage flag, hidden in a decoy order's content
+        real_flag_order_id = conn.execute(
+            """
+            INSERT INTO level6_orders
+                (player_id, owner_label, items_json, claimed_total, real_total)
+            VALUES (0, ?, ?, ?, ?)
+            """,
+            ("devon", json.dumps([{"product_id": 5, "qty": 1}]),
+             29.00, 29.00),
+        ).lastrowid
+
+        # More decoys after, so neither special order is suspiciously placed
+        for _ in range(5):
+            total = round(random.uniform(15, 150), 2)
+            conn.execute(
+                """
+                INSERT INTO level6_orders
+                    (player_id, owner_label, items_json, claimed_total, real_total)
+                VALUES (0, ?, ?, ?, ?)
+                """,
+                (random.choice(decoy_owners), fake_items(), total, total),
+            )
 
     conn.commit()
     conn.close()
@@ -431,3 +578,147 @@ def level5_check_membership(membership_id):
         conn.close()
 
     return access_granted
+
+def level6_get_products():
+    """
+    Returns the full product catalog. This is the AUTHORITATIVE source of
+    truth for prices -- checkout should always re-derive totals from here,
+    never from anything the client submits.
+    """
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM level6_products").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def level6_get_product_by_id(product_id):
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM level6_products WHERE id = ?", (product_id,)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def level6_calculate_real_total(items):
+    """
+    The CORRECT way to calculate a total: re-derive every price from the
+    products table, ignoring whatever the client claims a product costs.
+    items: list of dicts like [{"product_id": 1, "qty": 2}, ...]
+    """
+    total = 0.0
+    for item in items:
+        product = level6_get_product_by_id(item["product_id"])
+        if product:
+            total += product["price"] * item["qty"]
+    return round(total, 2)
+
+
+def level6_create_order(player_id, items, claimed_total):
+    """
+    INTENTIONALLY VULNERABLE -- this function trusts `claimed_total`,
+    a number the CLIENT computed and sent, and stores it as the order's
+    real charge. The function *also* calculates the real, correct total
+    (level6_calculate_real_total) and stores that too -- but only for
+    comparison/detection purposes. Nothing here ever stops a tampered
+    order from going through. That's the bug.
+    """
+    real_total = level6_calculate_real_total(items)
+
+    conn = get_db()
+    order_id = conn.execute(
+        """
+        INSERT INTO level6_orders
+            (player_id, owner_label, items_json, claimed_total, real_total, note)
+        VALUES (?, 'you', ?, ?, ?, '')
+        """,
+        (player_id, json.dumps(items), claimed_total, real_total),
+    ).lastrowid
+    conn.commit()
+    conn.close()
+
+    if claimed_total != real_total:
+        log_event(
+            player_id, 6, "price_tampering_detected",
+            f"claimed={claimed_total} real={real_total} order_id={order_id}",
+        )
+
+    return order_id
+
+def level6_get_order(order_id):
+    """
+    INTENTIONALLY VULNERABLE -- fetches an order by ID with no check on
+    whether the requester (player_id) actually owns it. Same bug class
+    as level2_get_note: any valid order_id returns its full contents,
+    including the note field, regardless of who's asking.
+    """
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM level6_orders WHERE id = ?", (order_id,)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def level6_trigger_decoy(player_id):
+    """
+    Called when a player submits the honeytoken flag. Starts the
+    countdown timer and marks them suspicious. Does NOT touch hearts --
+    Hacker has no hearts system, this is the only consequence.
+    """
+    conn = get_db()
+    conn.execute(
+        """
+        INSERT INTO level6_state (player_id, decoy_triggered_at, suspicious)
+        VALUES (?, CURRENT_TIMESTAMP, 1)
+        ON CONFLICT(player_id)
+        DO UPDATE SET decoy_triggered_at = CURRENT_TIMESTAMP, suspicious = 1
+        """,
+        (player_id,),
+    )
+    conn.commit()
+    conn.close()
+    log_event(player_id, 6, "decoy_triggered", "honeytoken flag submitted")
+
+
+def level6_get_state(player_id):
+    """
+    Returns this player's Hacker-level state (timer/suspicion info),
+    or a safe default dict if they haven't triggered anything yet.
+    """
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM level6_state WHERE player_id = ?", (player_id,)
+    ).fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return {"player_id": player_id, "decoy_triggered_at": None, "suspicious": 0}
+
+
+def level6_timer_seconds_remaining(player_id, timer_length=120):
+    """
+    Returns how many seconds are left on the decoy countdown, or None if
+    no timer is running. 0 or negative means the timer has expired.
+    """
+    state = level6_get_state(player_id)
+    if not state["decoy_triggered_at"]:
+        return None
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT (strftime('%s', 'now') - strftime('%s', decoy_triggered_at)) as elapsed FROM level6_state WHERE player_id = ?",
+        (player_id,),
+    ).fetchone()
+    conn.close()
+    elapsed = row["elapsed"] if row else 0
+    return timer_length - elapsed
+
+
+def level6_reset_state(player_id):
+    """
+    Called when the player leaves Hacker after a timer expiry (or chooses
+    to restart) -- clears the timer/suspicion so a fresh attempt starts
+    clean, per the 'soft reset' design we agreed on.
+    """
+    conn = get_db()
+    conn.execute("DELETE FROM level6_state WHERE player_id = ?", (player_id,))
+    conn.commit()
+    conn.close()

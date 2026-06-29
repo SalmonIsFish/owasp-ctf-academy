@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <title>OWASP CTF Academy - Hacker</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% include "_hacker_timer.html" %}
+  <div class="container">
+    <h1>OWASP CTF Academy</h1>
+    <p><a href="/levels" style="color:#8b949e; font-size:0.85em;">← Back to levels</a></p>
+
+    <p>
+      <span class="badge">🕵️ Pentest Mode — no hearts, stay sharp</span>
+      &nbsp;
+      <span class="badge">Score: {{ player.score }}</span>
+    </p>
+
+    <h3>Level 6 (Capstone): {{ level.name }}</h3>
+    <p><em>{{ level.owasp }}</em></p>
+    <p>{{ level.description }}</p>
+
+    {% if state.suspicious %}
+      <div class="level-card locked">
+        <strong>⚠ You are flagged as suspicious.</strong>
+        {% if seconds_left is not none and seconds_left > 0 %}
+          <p>Time remaining before this session is terminated: <strong>{{ seconds_left }}s</strong></p>
+          <p style="font-size:0.85em; color:#8b949e;">Refresh this page to update the countdown.</p>
+        {% else %}
+          <p>Your previous session expired. You've been reset — try again with what you've learned.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="level-card">
+      <strong>Welcome to the storefront.</strong>
+      <p>
+        This is a small e-commerce site with real layered defenses. Unlike
+        the previous five levels, there's no single isolated bug here —
+        you'll need to explore like an actual pentester would: browse the
+        shop, use it normally first, then start asking what happens when
+        you don't play by the rules.
+      </p>
+      <p style="font-size:0.85em; color:#8b949e;">
+        No hearts here. Wrong guesses cost nothing — but be careful what
+        you trigger. Some things you find may not be what they look like.
+      </p>
+      <a href="/level/hacker/shop"><button>Enter the Shop →</button></a>
+    </div>
+  </div>
+</body>
+</html>

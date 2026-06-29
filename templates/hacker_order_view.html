@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <title>OWASP CTF Academy - Order View</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% include "_hacker_timer.html" %}
+  <div class="container">
+    <h1>OWASP CTF Academy</h1>
+    <p>
+      <a href="/level/hacker" style="color:#8b949e; font-size:0.85em;">← Back to Hacker hub</a>
+    </p>
+
+    <p><span class="badge">🕵️ Pentest Mode</span> <span class="badge">Score: {{ player.score }}</span></p>
+
+    <h3>Order #{{ order_id }}</h3>
+
+    {% if order %}
+      <div class="level-card">
+        <strong>Owner: {{ order.owner_label }}</strong>
+        <p>Items: {{ order.items_json }}</p>
+        <p>Claimed total: ${{ "%.2f"|format(order.claimed_total) }}</p>
+        <p>Real total: ${{ "%.2f"|format(order.real_total) }}</p>
+        {% if order.note %}
+          <p><strong>Note:</strong> {{ order.note }}</p>
+        {% endif %}
+      </div>
+
+      {% if flag_message %}
+        <p class="{{ flag_message.type }}">{{ flag_message.message }}</p>
+      {% endif %}
+
+      <form method="POST" action="/level/hacker/orders/{{ order_id }}">
+        <input type="text" name="flag" placeholder="FLAG{...}">
+        <button type="submit">Submit Flag</button>
+      </form>
+    {% else %}
+      <p>No order found with that ID.</p>
+    {% endif %}
+  </div>
+</body>
+</html>

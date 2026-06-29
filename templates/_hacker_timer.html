@@ -1,0 +1,28 @@
+{% if seconds_left is not none %}
+<div id="hacker-timer-badge" style="position:fixed; top:16px; right:16px; z-index:999;">
+  <span class="badge" style="background:#5c1a1a; color:#ffb3b3;">
+    ⚠ Suspicious — <span id="hacker-timer-value">{{ seconds_left }}</span>s
+  </span>
+</div>
+<script>
+  (function () {
+    const secondsLeftEl = document.getElementById("hacker-timer-value");
+    let secondsLeft = parseInt('{{ seconds_left | int }}', 10);
+    if (!secondsLeftEl || Number.isNaN(secondsLeft)) {
+      return;
+    }
+
+    const tick = function () {
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) {
+        window.location.href = "/level/hacker";
+        return;
+      }
+      secondsLeftEl.textContent = secondsLeft;
+      setTimeout(tick, 1000);
+    };
+
+    setTimeout(tick, 1000);
+  })();
+</script>
+{% endif %}

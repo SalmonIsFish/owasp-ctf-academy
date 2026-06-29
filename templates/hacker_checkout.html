@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <title>OWASP CTF Academy - Checkout</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% include "_hacker_timer.html" %}
+  <div class="container">
+    <h1>OWASP CTF Academy</h1>
+    <p>
+      <a href="/level/hacker/cart" style="color:#8b949e; font-size:0.85em;">← Back to Cart</a>
+    </p>
+
+    <p><span class="badge">🕵️ Pentest Mode</span> <span class="badge">Score: {{ player.score }}</span></p>
+
+    <h3>Checkout</h3>
+
+    {% if order_id %}
+      <div class="level-card solved">
+        <strong>✅ Order placed!</strong>
+        <p>Order #{{ order_id }} confirmed. Total charged: ${{ "%.2f"|format(order_total) }}</p>
+        <p><a href="/level/hacker/orders/{{ order_id }}">View your order →</a></p>
+      </div>
+    {% elif cart_items %}
+      <form method="POST" action="/level/hacker/checkout">
+        {% for item in cart_items %}
+          <div class="level-card">
+            <strong>{{ item.name }}</strong> × {{ item.qty }}
+            <input type="hidden" name="price_{{ item.product_id }}" value="{{ item.price }}">
+            <span class="badge">${{ "%.2f"|format(item.price) }} each</span>
+          </div>
+        {% endfor %}
+        <button type="submit">Confirm Order</button>
+      </form>
+    {% else %}
+      <p>Your cart is empty. <a href="/level/hacker/shop">Go shopping →</a></p>
+    {% endif %}
+  </div>
+</body>
+</html>

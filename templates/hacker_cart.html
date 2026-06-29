@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <title>OWASP CTF Academy - Hacker Cart</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% include "_hacker_timer.html" %}
+  <div class="container">
+    <h1>OWASP CTF Academy</h1>
+    <p>
+      <a href="/level/hacker/shop" style="color:#8b949e; font-size:0.85em;">← Continue Shopping</a>
+    </p>
+
+
+    <h3>Your Cart</h3>
+
+    {% if cart_items %}
+        <div class="level-card">
+          <strong>{{ item.name }}</strong>
+          <span class="badge">${{ "%.2f"|format(item.price) }} × {{ item.qty }}</span>
+          <p>Line total: ${{ "%.2f"|format(item.line_total) }}</p>
+          <form method="POST" action="/level/hacker/cart">
+            <input type="hidden" name="action" value="remove">
+            <input type="hidden" name="product_id" value="{{ item.product_id }}">
+            <button type="submit">Remove</button>
+          </form>
+        </div>
+      {% endfor %}
+
+      <p><strong>Cart Total: ${{ "%.2f"|format(cart_total) }}</strong></p>
+      <a href="/level/hacker/checkout"><button>Proceed to Checkout →</button></a>
+    {% else %}
+      <p>Your cart is empty. <a href="/level/hacker/shop">Go shopping →</a></p>
+    {% endif %}
+  </div>
+</body>
+</html>
